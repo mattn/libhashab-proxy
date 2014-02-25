@@ -3,6 +3,7 @@
 #include <string>
 #include <iomanip>
 #include <sstream>
+#include <iostream>
 #include <stdexcept>
 
 #ifdef _WIN32
@@ -51,14 +52,11 @@ from_hex(const std::string& input, size_t len) {
   std::string output;
   output.reserve(len / 2);
   for (size_t i = 0; i < len; i += 2) {
-    char a = input[i];
-    const char* p = std::lower_bound(lut, lut + 16, a);
-    if (*p != a) throw std::invalid_argument("not a hex digit");
-    char b = input[i + 1];
-    const char* q = std::lower_bound(lut, lut + 16, b);
-    if (*q != b) throw std::invalid_argument("not a hex digit");
-
-    output.push_back(((p - lut) << 4) | (q - lut));
+    char* p1 = strchr(lut, toupper(input[i]));
+    if (!p1) throw std::invalid_argument("not a hex digit");
+    char* p2 = strchr(lut, toupper(input[i + 1]));
+    if (!p1) throw std::invalid_argument("not a hex digit");
+    output.push_back(((p1 - lut) << 4) | (p2 - lut));
   }
   return output;
 }
@@ -115,18 +113,20 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
   CURL* curl;
   CURLcode res = CURLE_OK;
   MEMFILE* mf;
+  long status = 0;
   char* ptr;
+  size_t len;
   char* endpoint = getenv("LIBHASHAB_ENDPOINT");
   if (endpoint == NULL) {
     return 1;
   }
   std::string url = endpoint;
   url += "?sha1=";
-  url += to_hex(sha1, sizeof(sha1));
+  url += std::string((const char*) sha1, 20);
   url += "&uuid=";
-  url += to_hex(uuid, sizeof(uuid));
+  url += std::string((const char*) uuid, 20);
   url += "&rndb=";
-  url += to_hex(rndb, sizeof(rndb));
+  url += std::string((const char*) rndb, 23);
 
   mf = memfopen();
   curl = curl_easy_init();
@@ -136,13 +136,27 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
   res = curl_easy_perform(curl);
   curl_easy_cleanup(curl);
-  if (res != CURLE_OK) {
+  curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &status);
+  if (res != CURLE_OK || status != 200) {
     memfclose(mf);
     return 1;
   }
-  std::string bin = from_hex(mf->data, mf->size);
-  memfclose(mf);
-  memcpy(target, bin.data(), sizeof(target));
+  ptr = mf->data;
+  len = 0;
+  while (*ptr && isalnum(*ptr)) {
+    len++;
+    ptr++;
+  }
+  try {
+    std::string bin = from_hex(mf->data, len);
+    memfclose(mf);
+    memset(target, 0, 57);
+    memcpy(target, bin.data(), std::min((int) bin.size(), 57));
+  } catch (std::invalid_argument& e) {
+    std::cerr << e.what() << std::endl;
+    memfclose(mf);
+    return 1;
+  }
   return 0;
 }
 
