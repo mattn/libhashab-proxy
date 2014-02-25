@@ -4,7 +4,7 @@ import ctypes
 import binascii
 import os
 
-print "Content-type: text/html\n\n"
+print "Content-type: text/plain\n\n"
 
 q = cgi.parse_qs(os.environ["QUERY_STRING"])
 
