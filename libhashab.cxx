@@ -123,11 +123,11 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
   }
   std::string url = endpoint;
   url += "?sha1=";
-  url += std::string((const char*) sha1, 20);
+  url += to_hex(sha1, 20);
   url += "&uuid=";
-  url += std::string((const char*) uuid, 20);
+  url += to_hex(uuid, 20);
   url += "&rndb=";
-  url += std::string((const char*) rndb, 23);
+  url += to_hex(rndb, 23);
 
   mf = memfopen();
   curl = curl_easy_init();
@@ -139,7 +139,7 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
   curl_easy_cleanup(curl);
   curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &status);
   if (res != CURLE_OK || status != 200) {
-    std::cerr << "calcHashAB: failure" << std::endl;
+    std::cerr << "calcHashAB: bad response " << status << std::endl;
     memfclose(mf);
     return 1;
   }
