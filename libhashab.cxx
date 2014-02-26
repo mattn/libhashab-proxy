@@ -33,7 +33,7 @@ url_encode(const std::string &value) {
 
 static std::string
 to_hex(const unsigned char* data, size_t len) {
-  static const char* const lut = "0123456789ABCDEF";
+  static const char* const lut = "0123456789abcdef";
   std::string output;
   output.reserve(2 * len);
   for (size_t i = 0; i < len; i++) {
@@ -46,17 +46,16 @@ to_hex(const unsigned char* data, size_t len) {
 
 static std::string
 from_hex(const std::string& input, size_t len) {
-  static const char* const lut = "0123456789ABCDEF";
+  static const char* const lut = "0123456789abcdef";
   if (len & 1) throw std::invalid_argument("odd length");
-
   std::string output;
   output.reserve(len / 2);
   for (size_t i = 0; i < len; i += 2) {
-    char* p1 = strchr(lut, toupper(input[i]));
+    char* p1 = strchr(lut, tolower(input[i]));
     if (!p1) throw std::invalid_argument("not a hex digit");
-    char* p2 = strchr(lut, toupper(input[i + 1]));
-    if (!p1) throw std::invalid_argument("not a hex digit");
-    output.push_back(((p1 - lut) << 4) | (p2 - lut));
+    char* p2 = strchr(lut, tolower(input[i + 1]));
+    if (!p2) throw std::invalid_argument("not a hex digit");
+    output.push_back((unsigned char) ((p1 - lut) << 4) | (p2 - lut));
   }
   return output;
 }
@@ -117,6 +116,8 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
   char* ptr;
   size_t len;
   char* endpoint = getenv("LIBHASHAB_ENDPOINT");
+
+  memset(target, 0, 57);
   if (endpoint == NULL) {
     std::cerr << "calcHashAB: $LIBHASHAB_ENDPOINT doesn't set" << std::endl;
     return 1;
@@ -128,6 +129,7 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
   url += to_hex(uuid, 20);
   url += "&rndb=";
   url += to_hex(rndb, 23);
+  std::cerr << "[libhashab] Request: " << url.c_str() << std::endl;
 
   mf = memfopen();
   curl = curl_easy_init();
@@ -150,9 +152,9 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
     ptr++;
   }
   try {
+    std::cerr << "[libhashab] Response: " << std::string(mf->data, len) << std::endl;
     std::string bin = from_hex(mf->data, len);
     memfclose(mf);
-    memset(target, 0, 57);
     memcpy(target, bin.data(), std::min((int) bin.size(), 57));
   } catch (std::invalid_argument& e) {
     std::cerr << "calcHashAB: " << e.what() << std::endl;
@@ -160,33 +162,6 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
     return 1;
   }
   return 0;
-}
-
-EXPORT void
-get_random_bytes_from_hashAB(unsigned char *hash, unsigned char *rndb) {
-  rndb[0]  = hash[23];
-  rndb[1]  = hash[13];
-  rndb[2]  = hash[29];
-  rndb[3]  = hash[12];
-  rndb[4]  = hash[37];
-  rndb[5]  = hash[8];
-  rndb[6]  = hash[4];
-  rndb[7]  = hash[6];
-  rndb[8]  = hash[10];
-  rndb[9]  = hash[41];
-  rndb[10] = hash[53];
-  rndb[11] = hash[27];
-  rndb[12] = hash[5];
-  rndb[13] = hash[43];
-  rndb[14] = hash[28];
-  rndb[15] = hash[45];
-  rndb[16] = hash[16];
-  rndb[17] = hash[46];
-  rndb[18] = hash[34];
-  rndb[19] = hash[9];
-  rndb[20] = hash[19];
-  rndb[21] = hash[2];
-  rndb[22] = hash[56];
 }
 
 }
