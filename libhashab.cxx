@@ -97,16 +97,6 @@ memfwrite(char* ptr, size_t size, size_t nmemb, void* stream) {
   return block;
 }
 
-static char*
-memfstrdup(MEMFILE* mf) {
-  char* buf;
-  if (mf->size == 0) return NULL;
-  buf = (char*) malloc(mf->size + 1);
-  memcpy(buf, mf->data, mf->size);
-  buf[mf->size] = 0;
-  return buf;
-}
-
 EXPORT int
 calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[20], unsigned char rndb[23]) {
   CURL* curl;
@@ -114,6 +104,7 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
   MEMFILE* mf;
   long status = 0;
   char* ptr;
+  char* top;
   size_t len;
   char* endpoint = getenv("LIBHASHAB_ENDPOINT");
 
@@ -145,15 +136,19 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
     memfclose(mf);
     return 1;
   }
-  ptr = mf->data;
+  top = mf->data;
+  while (*ptr && !isalnum(*ptr)) {
+    top++;
+  }
+  ptr = top;
   len = 0;
   while (*ptr && isalnum(*ptr)) {
     len++;
     ptr++;
   }
   try {
-    std::cerr << "[libhashab] Response: " << std::string(mf->data, len) << std::endl;
-    std::string bin = from_hex(mf->data, len);
+    std::cerr << "[libhashab] Response: " << std::string(top, len) << std::endl;
+    std::string bin = from_hex(top, len);
     memfclose(mf);
     memcpy(target, bin.data(), std::min((int) bin.size(), 57));
   } catch (std::invalid_argument& e) {
