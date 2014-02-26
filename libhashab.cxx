@@ -119,7 +119,7 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
 
   memset(target, 0, 57);
   if (endpoint == NULL) {
-    std::cerr << "calcHashAB: $LIBHASHAB_ENDPOINT doesn't set" << std::endl;
+    std::cerr << "[libhashab] $LIBHASHAB_ENDPOINT doesn't set" << std::endl;
     return 1;
   }
   std::string url = endpoint;
@@ -141,7 +141,7 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
   curl_easy_cleanup(curl);
   curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &status);
   if (res != CURLE_OK || status != 200) {
-    std::cerr << "calcHashAB: bad response " << status << std::endl;
+    std::cerr << "[libhashab] Bad response: " << status << std::endl;
     memfclose(mf);
     return 1;
   }
@@ -157,7 +157,7 @@ calcHashAB(unsigned char target[57], unsigned char sha1[20], unsigned char uuid[
     memfclose(mf);
     memcpy(target, bin.data(), std::min((int) bin.size(), 57));
   } catch (std::invalid_argument& e) {
-    std::cerr << "calcHashAB: " << e.what() << std::endl;
+    std::cerr << "[libhashab] Exception: " << e.what() << std::endl;
     memfclose(mf);
     return 1;
   }
